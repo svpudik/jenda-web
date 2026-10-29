@@ -6,6 +6,7 @@ Jednoduchy osobni blog, ktery bezi na GitHub Pages. Stranku muzes upravovat v HT
 
 - Zobrazit verejne prispevky vsem navstevnikum.
 - Prihlasit autora pres Google ucet.
+- Umoznit pridavani prispevku a pristup k nevejnym zapiskum jen schvalenym uctum.
 - Ulozit prispevky jako verejne, jen pro vybrane kamarady nebo soukrome.
 - Zobrazit autorovi jeho soukrome prispevky a kamaradum ty, ktere jim autor povolil.
 - Spravovat kamarady pomoci jejich Firebase ID.
@@ -34,16 +35,29 @@ Tuhle cast nastav s rodicem. Firebase je sluzba, ktera webu poskytne prihlaseni 
 
 Dokud neni konfigurace doplnena a databaze nastavena, prihlaseni ani ukladani prispevku nebudou fungovat. Nezverejnuj konfiguracni klice sluzeb, ktere nejsou urcene pro web.
 
-## 3. Jak pridat kamarada
+Prihlaseni pres Google samo o sobe ucet neschvaluje. Firebase muze uzivatele prihlasit, ale aplikace mu do schvaleni nedovoli pridavat prispevky, spravovat kamarady ani cist nevejne zapisky. Prvni prihlaseni automaticky vytvori zadost v kolekci `users` se stavem `approved: false`. Verejne prispevky zustavaji verejne.
 
-1. Prihlas se na web tlacitkem **Prihlasit pres Google**.
+## 3. Jak schvalit ucet
+
+Ucty `svpudik@gmail.com` a `janpudik@gmail.com` jsou automaticky povolene a mohou schvalovat ostatni. Musi mit take opravneni otevrit projekt ve Firebase Console; seznam v `firestore.rules` toto pristupove opravneni nenahrazuje.
+
+1. Novy uzivatel se jednou prihlasi pres Google; na webu uvidi, ze jeho ucet ceka na schvaleni.
+2. Ve Firebase Console otevri **Firestore Database > Data > users**. Dokument s ID uzivatele se vytvori automaticky a obsahuje jeho e-mail, jmeno a `approved: false`.
+3. Zmen u tohoto dokumentu pole `approved` z `false` na `true`.
+4. Uzivatel obnovi stranku. Od te chvile muze pridavat prispevky a pouzivat ostatni funkce uctu.
+
+ID dokumentu najdes take v **Authentication > Users** ve Firebase Console. Pokud `users` nebo uzivatelsky dokument jeste neexistuje, uzivatel se musi nejprve prihlasit na webu.
+
+## 4. Jak pridat kamarada
+
+1. Prihlas se na web tlacitkem **Prihlasit pres Google** a pockej na schvaleni uctu.
 2. V casti **Muj ucet** zkopiruj svoje Firebase ID a posli ho kamaradovi. ID samo o sobe neni heslo, ale posilej ho jen lidem, ktere znas.
-3. Kamarad se musi na webu alespon jednou prihlasit pres Google a poslat ti sve Firebase ID.
+3. Kamarad se musi na webu alespon jednou prihlasit pres Google, nechat si schvalit ucet a poslat ti sve Firebase ID.
 4. V casti **Kamaradi** vloz jeho ID. Od te chvile mu muzes povolit sve prispevky pro kamarady.
 
 Prispevek oznaceny **Soukromy** uvidis jen ty. **Kamaradi** ho uvidi jen prihlaseni lide, ktere mas v seznamu kamaradu v okamziku vytvoreni prispevku. **Verejny** uvidi kazdy. Prispevky pro kamarady nejsou sifrovane; pro osobni a citlive informace blog nepouzivej.
 
-## 4. Jak upravovat stranku
+## 5. Jak upravovat stranku
 
 Nejjednodussi zpusob je upravovat soubory primo na GitHubu:
 

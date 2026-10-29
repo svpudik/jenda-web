@@ -1,10 +1,12 @@
 import { firebaseConfig } from "./firebase-config.js";
 
 const firebaseVersion = "10.12.2";
+const adminEmails = ["svpudik@gmail.com", "janpudik@gmail.com"];
 const ui = {
   accountDetails: document.querySelector("#accountDetails"),
   accountName: document.querySelector("#accountName"),
   accountUid: document.querySelector("#accountUid"),
+  approvalNotice: document.querySelector("#approvalNotice"),
   composer: document.querySelector("#composerSection"),
   copyUid: document.querySelector("#copyUidButton"),
   friendForm: document.querySelector("#friendForm"),
@@ -24,6 +26,7 @@ const ui = {
 let auth;
 let database;
 let currentUser;
+let userApproved = false;
 let friendIds = [];
 let firebaseReady = false;
 
@@ -49,16 +52,18 @@ async function connectFirebase() {
   return { authModule, store };
 }
 
-function updateAccount(user) {
+function updateAccount(user, approved = false) {
   const signedIn = Boolean(user);
+  const canUseApp = signedIn && approved;
   ui.signIn.hidden = signedIn;
-  ui.signIn.disabled = signedIn || !firebaseReady;
+  ui.signIn.disabled = !firebaseReady;
   ui.signOut.hidden = !signedIn;
   ui.signedOut.hidden = signedIn;
-  ui.accountDetails.hidden = !signedIn;
-  ui.friendsSection.hidden = !signedIn;
-  ui.composer.hidden = !signedIn;
-  if (user) {
+  ui.approvalNotice.hidden = !signedIn || approved;
+  ui.accountDetails.hidden = !canUseApp;
+  ui.friendsSection.hidden = !canUseApp;
+  ui.composer.hidden = !canUseApp;
+  if (canUseApp) {
     ui.accountName.textContent = user.displayName || "Prihlaseny autor";
     ui.accountUid.textContent = user.uid;
   }
@@ -67,7 +72,7 @@ function updateAccount(user) {
 async function getVisiblePosts(store) {
   const collection = store.collection(database, "posts");
   const queries = [store.getDocs(store.query(collection, store.where("visibility", "==", "public")))];
-  if (currentUser) {
+  if (currentUser && userApproved) {
     queries.push(store.getDocs(store.query(collection, store.where("ownerUid", "==", currentUser.uid))));
     queries.push(store.getDocs(store.query(collection, store.where("friendUids", "array-contains", currentUser.uid))));
   }
@@ -76,8 +81,8 @@ async function getVisiblePosts(store) {
   for (const snapshot of await Promise.all(queries)) {
     for (const document of snapshot.docs) {
       const post = { id: document.id, ...document.data() };
-      if (post.visibility === "public" || post.ownerUid === currentUser?.uid ||
-        (post.visibility === "friends" && post.friendUids?.includes(currentUser?.uid))) {
+      if (post.visibility === "public" || (userApproved && (post.ownerUid === currentUser?.uid ||
+        (post.visibility === "friends" && post.friendUids?.includes(currentUser?.uid))))) {
         posts.set(document.id, post);
       }
     }
@@ -275,14 +280,41 @@ async function start() {
 
     authModule.onAuthStateChanged(auth, async (user) => {
       currentUser = user;
+      userApproved = false;
       updateAccount(user);
       if (user) {
+        let approved = false;
         try {
-          await loadFriends(store);
+          const userRef = store.doc(database, "users", user.uid);
+          let profile = await store.getDoc(userRef);
+          if (!profile.exists()) {
+            await store.setDoc(userRef, {
+              approved: false,
+              email: user.email || "",
+              displayName: user.displayName || "",
+              requestedAt: store.serverTimestamp()
+            });
+            profile = await store.getDoc(userRef);
+          }
+          approved = profile.data()?.approved === true || adminEmails.includes(user.email);
         } catch (error) {
-          showStatus(`Seznam kamaradu se nepodarilo nacist: ${error.message}`, true);
+          showStatus(`Stav schvaleni se nepodarilo nacist: ${error.message}`, true);
+        }
+        if (auth.currentUser?.uid !== user.uid) return;
+        userApproved = approved;
+        updateAccount(user, userApproved);
+        if (userApproved) {
+          try {
+            await loadFriends(store);
+          } catch (error) {
+            showStatus(`Seznam kamaradu se nepodarilo nacist: ${error.message}`, true);
+          }
+        } else {
+          friendIds = [];
+          ui.friends.replaceChildren();
         }
       } else {
+        updateAccount(null);
         friendIds = [];
         ui.friends.replaceChildren();
       }

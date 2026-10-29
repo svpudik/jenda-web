@@ -5,6 +5,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email in ['svpudik@gmail.com', 'janpudik@gmail.com'];
+    }
+
+    function isApproved() {
+      return isAdmin()
+        || (signedIn()
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.approved == true);
+    }
+
     function ownsPost() {
       return signedIn() && resource.data.ownerUid == request.auth.uid;
     }
@@ -25,27 +37,45 @@ service cloud.firestore {
         && (data.visibility == 'friends' || data.friendUids.size() == 0);
     }
 
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll(['approved', 'email', 'displayName', 'requestedAt'])
+        && request.resource.data.keys().hasOnly(['approved', 'email', 'displayName', 'requestedAt'])
+        && request.resource.data.approved == false
+        && request.resource.data.email is string
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.displayName is string
+        && request.resource.data.requestedAt is timestamp;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approved'])
+        && request.resource.data.approved is bool;
+      allow delete: if false;
+
+      match /friends/{friendId} {
+        allow read, create, delete: if isApproved() && request.auth.uid == userId;
+        allow update: if false;
+      }
+    }
+
     match /posts/{postId} {
       allow read: if resource.data.visibility == 'public'
-        || ownsPost()
-        || (signedIn()
-          && request.auth.uid in resource.data.friendUids);
+        || (isApproved()
+          && (ownsPost()
+            || request.auth.uid in resource.data.friendUids));
 
-      allow create: if signedIn()
+      allow create: if isApproved()
         && validPost(request.resource.data)
         && (request.resource.data.visibility != 'friends'
           || request.resource.data.friendUids.size() > 0);
 
-      allow update: if ownsPost()
+      allow update: if isApproved()
+        && ownsPost()
         && validPost(request.resource.data)
         && request.resource.data.createdAt == resource.data.createdAt;
 
-      allow delete: if ownsPost();
-    }
-
-    match /users/{userId}/friends/{friendId} {
-      allow read, create, delete: if signedIn() && request.auth.uid == userId;
-      allow update: if false;
+      allow delete: if isApproved() && ownsPost();
     }
   }
 }
