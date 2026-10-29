@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f6f5ef" />
+    <meta name="description" content="Osobni blog a napady." />
+    <title>Jenduv blog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="main.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="#top" aria-label="Jenduv blog, zacatek">
+        <span class="wordmark-icon" aria-hidden="true">J</span>
+        <span>Jenduv <strong>blog</strong></span>
+      </a>
+      <div class="topbar-right">
+        <span class="topbar-note"><span class="live-dot" aria-hidden="true"></span> male misto na internetu</span>
+        <button id="signInButton" class="button button-dark" type="button" disabled>Přihlásit přes Google</button>
+        <button id="signOutButton" class="button button-quiet" type="button" hidden>Odhlásit</button>
+      </div>
+    </header>
+
+    <main id="top" class="page-shell">
+      <section class="intro" aria-labelledby="pageTitle">
+        <div class="intro-copy">
+          <p class="eyebrow">Zapisnik Jendy</p>
+          <h1 id="pageTitle">Napady, zazitky<br />a veci, co me bavi.</h1>
+          <p class="intro-text">Muj kousek internetu. Nektere zapisky jsou pro vsechny, jine jen pro kamarady nebo pro me.</p>
+        </div>
+        <div class="intro-art" aria-hidden="true">
+          <span class="art-sun"></span>
+          <span class="art-line art-line-one"></span>
+          <span class="art-line art-line-two"></span>
+          <span class="art-note">zapisek<br />c. 001</span>
+          <span class="art-stamp">J</span>
+        </div>
+      </section>
+
+      <div id="setupNotice" class="notice notice-warm" role="status">
+        Web je pripraveny. Pro prihlaseni a ukladani prispevku je potreba nastavit Firebase podle navodu v README.
+      </div>
+      <div id="statusMessage" class="notice" role="status" hidden></div>
+
+      <div class="content-grid">
+        <aside class="sidebar" aria-label="Muj ucet a nastaveni">
+          <section class="side-section account-section">
+            <p class="section-kicker">Muj ucet</p>
+            <div id="signedOutMessage" class="account-copy">Prihlas se, pokud chces psat prispevky nebo cist zapisky sdilene s kamarady.</div>
+            <div id="accountDetails" hidden>
+              <p class="account-name" id="accountName"></p>
+              <p class="account-hint">Tvoje ID pro sdileni s kamarady:</p>
+              <div class="copy-row">
+                <code id="accountUid"></code>
+                <button id="copyUidButton" class="icon-button" type="button" aria-label="Zkopirovat moje ID" title="Zkopirovat ID">Kopirovat</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="friendsSection" class="side-section" hidden>
+            <div class="section-heading">
+              <p class="section-kicker">Muj seznam</p>
+              <h2>Kamaradi</h2>
+            </div>
+            <p class="small-copy">Pridavej ID kamaradu, kterym chces ukazat sve soukromejsi zapisky.</p>
+            <form id="friendForm" class="friend-form">
+              <label class="visually-hidden" for="friendUidInput">Firebase ID kamarada</label>
+              <input id="friendUidInput" name="friendUid" type="text" placeholder="Vloz ID kamarada" autocomplete="off" required />
+              <button class="button button-outline" type="submit">Pridat</button>
+            </form>
+            <ul id="friendsList" class="friends-list"></ul>
+          </section>
+
+          <p class="privacy-note"><span aria-hidden="true">*</span> Nepiš sem hesla, adresu ani nic, co ma zustat opravdu tajne.</p>
+        </aside>
+
+        <div class="main-column">
+          <section id="composerSection" class="composer" hidden aria-labelledby="composerTitle">
+            <div class="composer-header">
+              <div>
+                <p class="section-kicker">Novy zapis</p>
+                <h2 id="composerTitle">Co mas na mysli?</h2>
+              </div>
+              <span class="composer-mark" aria-hidden="true">✳</span>
+            </div>
+            <form id="postForm" class="post-form">
+              <label for="postTitle">Nadpis</label>
+              <input id="postTitle" name="title" type="text" maxlength="90" placeholder="Treba: Muj prvni pokus o web" required />
+              <label for="postBody">Tvuj zapis</label>
+              <textarea id="postBody" name="body" rows="5" maxlength="5000" placeholder="Napis, co se ti honi hlavou..." required></textarea>
+              <div class="form-footer">
+                <div class="visibility-control">
+                  <label for="postVisibility">Kdo to uvidi</label>
+                  <select id="postVisibility" name="visibility">
+                    <option value="public">Všichni</option>
+                    <option value="friends">Moji kamaradi</option>
+                    <option value="private">Jen ja</option>
+                  </select>
+                </div>
+                <button class="button button-dark" type="submit">Ulozit zapis <span aria-hidden="true">↗</span></button>
+              </div>
+            </form>
+          </section>
+
+          <section class="feed" aria-labelledby="feedTitle">
+            <div class="feed-heading">
+              <div>
+                <p class="section-kicker">Zapisnik</p>
+                <h2 id="feedTitle">Prispevky</h2>
+              </div>
+              <span id="postCount" class="post-count">0 zapisku</span>
+            </div>
+            <div id="postsList" class="posts-list" aria-live="polite">
+              <p class="empty-state">Zatim tu nic neni. Brzy pribude prvni zapis.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <span>Udelano po svem.</span>
+      <span>Jenduv blog <span aria-hidden="true">·</span> 2026</span>
+    </footer>
+  </body>
+</html>

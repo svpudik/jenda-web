@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsPost() {
+      return signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    function validPost(data) {
+      return data.keys().hasAll(['title', 'body', 'visibility', 'ownerUid', 'friendUids', 'createdAt'])
+        && data.keys().hasOnly(['title', 'body', 'visibility', 'ownerUid', 'friendUids', 'createdAt'])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 90
+        && data.body is string
+        && data.body.size() > 0
+        && data.body.size() <= 5000
+        && data.ownerUid == request.auth.uid
+        && data.visibility in ['public', 'friends', 'private']
+        && data.friendUids is list
+        && data.createdAt is timestamp
+        && (data.visibility == 'friends' || data.friendUids.size() == 0);
+    }
+
+    match /posts/{postId} {
+      allow read: if resource.data.visibility == 'public'
+        || ownsPost()
+        || (signedIn()
+          && request.auth.uid in resource.data.friendUids);
+
+      allow create: if signedIn()
+        && validPost(request.resource.data)
+        && (request.resource.data.visibility != 'friends'
+          || request.resource.data.friendUids.size() > 0);
+
+      allow update: if ownsPost()
+        && validPost(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if ownsPost();
+    }
+
+    match /users/{userId}/friends/{friendId} {
+      allow read, create, delete: if signedIn() && request.auth.uid == userId;
+      allow update: if false;
+    }
+  }
+}
